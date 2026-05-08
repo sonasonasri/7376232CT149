@@ -1,18 +1,33 @@
 import { useState, useEffect } from "react"
 
-const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJNYXBDbGFpbXMiOnsiYXVkIjoiaHR0cDovLzIwLjI0NC41Ni4xNDQvZXZhbHVhdGlvbi1zZXJ2aWNlIiwiZW1haWwiOiJzb25hc3Jpc3IuY3QyM0BiaXRzYXRoeS5hYy5pbiIsImV4cCI6MTc3ODIzNTA0OCwiaWF0IjoxNzc4MjM0MTQ4LCJpc3MiOiJBZmZvcmQgTWVkaWNhbCBUZWNobm9sb2dpZXMgUHJpdmF0ZSBMaW1pdGVkIiwianRpIjoiYWJkODZhNjAtNzcxZi00NTU5LWFjYjEtNzAwNzdhY2FkYTgyIiwibG9jYWxlIjoiZW4tSU4iLCJuYW1lIjoic29uYSBzcmkgcyByIiwic3ViIjoiMDYwYWRhMGMtYTAzYy00NjM2LTg3YjEtM2I3ODRiNDgyYjlmIn0sImVtYWlsIjoic29uYXNyaXNyLmN0MjNAYml0c2F0aHkuYWMuaW4iLCJuYW1lIjoic29uYSBzcmkgcyByIiwicm9sbE5vIjoiNzM3NjIzMmN0MTQ5IiwiYWNjZXNzQ29kZSI6InVLYUpmbSIsImNsaWVudElEIjoiMDYwYWRhMGMtYTAzYy00NjM2LTg3YjEtM2I3ODRiNDgyYjlmIiwiY2xpZW50U2VjcmV0IjoiZ3BIVWJuYkZSeEpXaGVzRCJ9.Ic4WitoKvg6zoLmJCh6zqMdGE3qHfoEXXW6a9BXYuMk"
-
 export default function App() {
   const [notes, setNotes] = useState([])
   const [seen, setSeen] = useState([])
   const [tab, setTab] = useState("all")
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch("http://4.224.186.213/evaluation-service/notifications", {
-      headers: { Authorization: "Bearer " + TOKEN }
+    fetch("/api/evaluation-service/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "sonasrisr.ct23@bitsathy.ac.in",
+        name: "Sona Sri S R",
+        rollNo: "7376232CT149",
+        accessCode: "uKaJfm",
+        clientID: "060ada0c-a03c-4636-87b1-3b784b482b9f",
+        clientSecret: "gpHUbnbFRxJWhesD"
+      })
     })
     .then(r => r.json())
-    .then(d => setNotes(d.notifications || []))
+    .then(d => fetch("/api/evaluation-service/notifications", {
+      headers: { Authorization: "Bearer " + d.access_token }
+    }))
+    .then(r => r.json())
+    .then(d => {
+      setNotes(d.notifications || [])
+      setLoading(false)
+    })
   }, [])
 
   function markRead(id) {
@@ -20,24 +35,20 @@ export default function App() {
   }
 
   const typeWeight = { Placement: 3, Result: 2, Event: 1 }
-
-  const topList = [...notes]
-    .sort((a, b) => typeWeight[b.Type] - typeWeight[a.Type])
-    .slice(0, 10)
-
+  const topList = [...notes].sort((a, b) => typeWeight[b.Type] - typeWeight[a.Type]).slice(0, 10)
   const list = tab === "all" ? notes : topList
+
+  if (loading) return <div style={{ padding: 20, textAlign: "center" }}>⏳ Loading...</div>
 
   return (
     <div style={{ padding: 20, maxWidth: 600, margin: "auto" }}>
       <h2>Notifications</h2>
-
       <button onClick={() => setTab("all")} style={{ marginRight: 10, background: tab === "all" ? "blue" : "gray", color: "white", padding: "6px 12px", border: "none", borderRadius: 4 }}>
         All ({notes.length})
       </button>
       <button onClick={() => setTab("priority")} style={{ background: tab === "priority" ? "blue" : "gray", color: "white", padding: "6px 12px", border: "none", borderRadius: 4 }}>
         Top 10
       </button>
-
       <div style={{ marginTop: 20 }}>
         {list.map(n => (
           <div key={n.ID} onClick={() => markRead(n.ID)}
